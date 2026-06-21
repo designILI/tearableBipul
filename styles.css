@@ -1,0 +1,133 @@
+:root {
+  color-scheme: dark;
+  --ink: #f5eee2;
+  --muted: rgba(245, 238, 226, 0.68);
+  --line: rgba(245, 238, 226, 0.28);
+  --paper-shadow: rgba(13, 12, 10, 0.55);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #100f0d;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  min-height: 100svh;
+}
+
+.stage {
+  position: relative;
+  width: 100vw;
+  height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.stage:active {
+  cursor: grabbing;
+}
+
+#artCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+
+#artCanvas.is-tearing {
+  cursor: grabbing;
+}
+
+h1 {
+  margin: 0 0 2px;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(1rem, 1.6vw, 1.28rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--ink);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
+}
+
+.controls {
+  position: absolute;
+  right: clamp(18px, 4vw, 42px);
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 3;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  color: var(--ink);
+}
+
+.controls-copy {
+  text-align: right;
+}
+
+.layer-status {
+  margin: 0;
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(245, 238, 226, 0.74);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
+}
+
+button {
+  min-width: 82px;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(16, 15, 13, 0.4);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+button:hover,
+button:focus-visible {
+  border-color: rgba(245, 238, 226, 0.62);
+  background: rgba(245, 238, 226, 0.12);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+@media (max-width: 680px) {
+  .controls {
+    right: 16px;
+    left: 16px;
+    justify-content: space-between;
+  }
+
+  .controls-copy {
+    text-align: left;
+  }
+}
