@@ -3,6 +3,9 @@ import * as THREE from "https://unpkg.com/three@0.164.1/build/three.module.js";
 const canvas = document.querySelector("#artCanvas");
 const resetButton = document.querySelector("#resetButton");
 const layerStatus = document.querySelector("#layerStatus");
+const tearSound = new Audio("assets/sounds/ripping-paper.mp3");
+tearSound.volume = 0.16;
+tearSound.preload = "auto";
 
 /*
   Replace these image paths with your own artwork files.
@@ -566,11 +569,18 @@ function maybeDropLayer() {
 }
 
 function startCenterPeel(layer) {
+  playTearSound();
   layer.peeling = true;
   layer.peelStart = performance.now();
   state.peelTransition = { layer, startedAt: layer.peelStart, duration: 1100 };
   state.activeLayer += 1;
   updateStatus();
+}
+
+function playTearSound() {
+  tearSound.pause();
+  tearSound.currentTime = 0;
+  tearSound.play().catch(() => {});
 }
 
 function updatePeelTransition() {
