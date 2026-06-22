@@ -580,7 +580,7 @@ function maybeDropLayer() {
   }
 
   state.tearPercent = estimateRevealed(layer);
-  if (state.tearPercent > 0.35 || traveledSeamLength() > Math.max(state.width, state.height) * 1.2) {
+  if (state.tearPercent > 0.42 || traveledSeamLength() > Math.max(state.width, state.height) * 1.44) {
     startCenterPeel(layer);
   }
 
