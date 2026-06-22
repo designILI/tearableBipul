@@ -4,10 +4,18 @@ const canvas = document.querySelector("#artCanvas");
 const resetButton = document.querySelector("#resetButton");
 const layerStatus = document.querySelector("#layerStatus");
 const tearSoundUrl = "assets/sounds/ripping-paper.mp3";
+const tearSliceStarts = [0.35, 0.8, 1.2, 1.75, 2.4, 3.1, 3.8, 4.6, 5.4, 6.2, 7.1, 8, 8.9, 9.8, 10.7, 11.3];
+const fallbackFinalTearSound = new Audio(tearSoundUrl);
+const fallbackScratchTearSounds = Array.from({ length: 5 }, () => new Audio(tearSoundUrl));
+fallbackFinalTearSound.preload = "auto";
+fallbackScratchTearSounds.forEach((sound) => {
+  sound.preload = "auto";
+});
 const tearAudioState = {
   context: null,
   buffer: null,
   loading: null,
+  scratchIndex: 0,
   lastScratchAt: 0,
   scratchDistance: 0,
 };
@@ -645,12 +653,14 @@ function loadTearBuffer() {
 function playTearSlice({ duration, volume, rate }) {
   const context = tearAudioState.context;
   const buffer = tearAudioState.buffer;
-  if (!context || !buffer || context.state !== "running") return;
+  if (!context || !buffer || context.state !== "running") {
+    playFallbackTearSlice({ duration, volume, rate });
+    return;
+  }
 
   const source = context.createBufferSource();
   const gain = context.createGain();
-  const maxOffset = Math.max(0, buffer.duration - duration - 0.05);
-  const offset = Math.random() * Math.min(maxOffset, 0.55);
+  const offset = pickTearSliceOffset(buffer.duration, duration);
   const now = context.currentTime;
 
   source.buffer = buffer;
@@ -660,6 +670,23 @@ function playTearSlice({ duration, volume, rate }) {
   gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
   source.connect(gain).connect(context.destination);
   source.start(now, offset, duration);
+}
+
+function playFallbackTearSlice({ duration, volume, rate }) {
+  const sound = duration > 0.3 ? fallbackFinalTearSound : fallbackScratchTearSounds[tearAudioState.scratchIndex];
+  tearAudioState.scratchIndex = (tearAudioState.scratchIndex + 1) % fallbackScratchTearSounds.length;
+  sound.pause();
+  sound.currentTime = pickTearSliceOffset(12.24, duration);
+  sound.volume = Math.min(volume * 1.15, 0.18);
+  sound.playbackRate = rate;
+  sound.play().catch(() => {});
+  window.setTimeout(() => sound.pause(), duration * 1000);
+}
+
+function pickTearSliceOffset(sourceDuration, sliceDuration) {
+  const usableStarts = tearSliceStarts.filter((start) => start + sliceDuration < sourceDuration - 0.05);
+  if (!usableStarts.length) return 0;
+  return usableStarts[Math.floor(Math.random() * usableStarts.length)];
 }
 
 function updatePeelTransition() {
