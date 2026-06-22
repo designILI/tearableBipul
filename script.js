@@ -4,19 +4,14 @@ const canvas = document.querySelector("#artCanvas");
 const resetButton = document.querySelector("#resetButton");
 const layerStatus = document.querySelector("#layerStatus");
 const tearSoundUrl = "assets/sounds/ripping-paper.mp3";
-const finalTearSound = new Audio(tearSoundUrl);
-const scratchTearSounds = Array.from({ length: 5 }, () => new Audio(tearSoundUrl));
-finalTearSound.volume = 0.16;
-finalTearSound.preload = "auto";
-scratchTearSounds.forEach((sound) => {
-  sound.volume = 0.07;
-  sound.preload = "auto";
-});
 const tearAudioState = {
-  scratchIndex: 0,
+  context: null,
+  buffer: null,
+  loading: null,
   lastScratchAt: 0,
   scratchDistance: 0,
 };
+initializeTearAudio();
 
 /*
   Replace these image paths with your own artwork files.
@@ -318,6 +313,7 @@ function pointerFromEvent(event) {
 function beginPointer(event) {
   if (state.peelTransition || state.activeLayer >= state.layers.length - 1) return;
 
+  unlockTearAudio();
   const point = pointerFromEvent(event);
   state.pointers.set(event.pointerId, point);
   state.pointer.copy(averagePointers());
@@ -593,26 +589,77 @@ function startCenterPeel(layer) {
 function playScratchTearSound(distance) {
   tearAudioState.scratchDistance += distance;
   const now = performance.now();
-  if (tearAudioState.scratchDistance < 24 || now - tearAudioState.lastScratchAt < 85) return;
+  if (tearAudioState.scratchDistance < 16 || now - tearAudioState.lastScratchAt < 55) return;
 
-  const sound = scratchTearSounds[tearAudioState.scratchIndex];
-  tearAudioState.scratchIndex = (tearAudioState.scratchIndex + 1) % scratchTearSounds.length;
   tearAudioState.lastScratchAt = now;
   tearAudioState.scratchDistance = 0;
 
-  sound.pause();
-  sound.currentTime = Math.random() * 0.18;
-  sound.volume = 0.045 + Math.random() * 0.035;
-  sound.playbackRate = 0.82 + Math.random() * 0.36;
-  sound.play().catch(() => {});
+  playTearSlice({
+    duration: 0.08 + Math.random() * 0.08,
+    volume: 0.035 + Math.random() * 0.03,
+    rate: 0.9 + Math.random() * 0.28,
+  });
 }
 
 function playFinalTearSound() {
-  finalTearSound.pause();
-  finalTearSound.currentTime = 0;
-  finalTearSound.volume = 0.15;
-  finalTearSound.playbackRate = 0.92 + Math.random() * 0.12;
-  finalTearSound.play().catch(() => {});
+  playTearSlice({
+    duration: 0.46 + Math.random() * 0.16,
+    volume: 0.12,
+    rate: 0.94 + Math.random() * 0.1,
+  });
+}
+
+function unlockTearAudio() {
+  initializeTearAudio();
+  if (!tearAudioState.context) return;
+
+  if (tearAudioState.context.state === "suspended") {
+    tearAudioState.context.resume().catch(() => {});
+  }
+}
+
+function initializeTearAudio() {
+  if (!tearAudioState.context) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    tearAudioState.context = new AudioContextClass();
+  }
+
+  loadTearBuffer();
+}
+
+function loadTearBuffer() {
+  if (tearAudioState.buffer || tearAudioState.loading || !tearAudioState.context) return;
+
+  tearAudioState.loading = fetch(tearSoundUrl)
+    .then((response) => response.arrayBuffer())
+    .then((data) => tearAudioState.context.decodeAudioData(data))
+    .then((buffer) => {
+      tearAudioState.buffer = buffer;
+    })
+    .catch(() => {
+      tearAudioState.loading = null;
+    });
+}
+
+function playTearSlice({ duration, volume, rate }) {
+  const context = tearAudioState.context;
+  const buffer = tearAudioState.buffer;
+  if (!context || !buffer || context.state !== "running") return;
+
+  const source = context.createBufferSource();
+  const gain = context.createGain();
+  const maxOffset = Math.max(0, buffer.duration - duration - 0.05);
+  const offset = Math.random() * Math.min(maxOffset, 0.55);
+  const now = context.currentTime;
+
+  source.buffer = buffer;
+  source.playbackRate.value = rate;
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(volume, now + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  source.connect(gain).connect(context.destination);
+  source.start(now, offset, duration);
 }
 
 function updatePeelTransition() {
