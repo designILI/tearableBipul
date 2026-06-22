@@ -3,9 +3,20 @@ import * as THREE from "https://unpkg.com/three@0.164.1/build/three.module.js";
 const canvas = document.querySelector("#artCanvas");
 const resetButton = document.querySelector("#resetButton");
 const layerStatus = document.querySelector("#layerStatus");
-const tearSound = new Audio("assets/sounds/ripping-paper.mp3");
-tearSound.volume = 0.16;
-tearSound.preload = "auto";
+const tearSoundUrl = "assets/sounds/ripping-paper.mp3";
+const finalTearSound = new Audio(tearSoundUrl);
+const scratchTearSounds = Array.from({ length: 5 }, () => new Audio(tearSoundUrl));
+finalTearSound.volume = 0.16;
+finalTearSound.preload = "auto";
+scratchTearSounds.forEach((sound) => {
+  sound.volume = 0.07;
+  sound.preload = "auto";
+});
+const tearAudioState = {
+  scratchIndex: 0,
+  lastScratchAt: 0,
+  scratchDistance: 0,
+};
 
 /*
   Replace these image paths with your own artwork files.
@@ -388,10 +399,12 @@ function carveBetweenHeads() {
   if (!state.lastHead) {
     state.lastHead = state.head.clone();
     cutOrganicHole(layer, state.head, state.brush * 0.5);
+    playScratchTearSound(state.brush);
     return;
   }
 
   const distance = state.head.distanceTo(state.lastHead);
+  playScratchTearSound(distance);
   const steps = Math.max(1, Math.ceil(distance / 6));
   for (let i = 1; i <= steps; i += 1) {
     const point = state.lastHead.clone().lerp(state.head, i / steps);
@@ -569,7 +582,7 @@ function maybeDropLayer() {
 }
 
 function startCenterPeel(layer) {
-  playTearSound();
+  playFinalTearSound();
   layer.peeling = true;
   layer.peelStart = performance.now();
   state.peelTransition = { layer, startedAt: layer.peelStart, duration: 1100 };
@@ -577,10 +590,29 @@ function startCenterPeel(layer) {
   updateStatus();
 }
 
-function playTearSound() {
-  tearSound.pause();
-  tearSound.currentTime = 0;
-  tearSound.play().catch(() => {});
+function playScratchTearSound(distance) {
+  tearAudioState.scratchDistance += distance;
+  const now = performance.now();
+  if (tearAudioState.scratchDistance < 24 || now - tearAudioState.lastScratchAt < 85) return;
+
+  const sound = scratchTearSounds[tearAudioState.scratchIndex];
+  tearAudioState.scratchIndex = (tearAudioState.scratchIndex + 1) % scratchTearSounds.length;
+  tearAudioState.lastScratchAt = now;
+  tearAudioState.scratchDistance = 0;
+
+  sound.pause();
+  sound.currentTime = Math.random() * 0.18;
+  sound.volume = 0.045 + Math.random() * 0.035;
+  sound.playbackRate = 0.82 + Math.random() * 0.36;
+  sound.play().catch(() => {});
+}
+
+function playFinalTearSound() {
+  finalTearSound.pause();
+  finalTearSound.currentTime = 0;
+  finalTearSound.volume = 0.15;
+  finalTearSound.playbackRate = 0.92 + Math.random() * 0.12;
+  finalTearSound.play().catch(() => {});
 }
 
 function updatePeelTransition() {
@@ -675,6 +707,8 @@ function resetGesture() {
   state.lastHead = null;
   state.seam = [];
   state.velocity.set(0, 0);
+  tearAudioState.scratchDistance = 0;
+  tearAudioState.lastScratchAt = 0;
   canvas.classList.remove("is-tearing");
   hideFlap();
   state.layers.forEach((layer) => {
