@@ -11,6 +11,8 @@ fallbackFinalTearSound.preload = "auto";
 fallbackScratchTearSounds.forEach((sound) => {
   sound.preload = "auto";
 });
+fallbackFinalTearSound.load();
+fallbackScratchTearSounds.forEach((sound) => sound.load());
 const tearAudioState = {
   context: null,
   buffer: null,
@@ -603,8 +605,8 @@ function playScratchTearSound(distance) {
   tearAudioState.scratchDistance = 0;
 
   playTearSlice({
-    duration: 0.08 + Math.random() * 0.08,
-    volume: 0.035 + Math.random() * 0.03,
+    duration: 0.16 + Math.random() * 0.08,
+    volume: 0.12 + Math.random() * 0.06,
     rate: 0.9 + Math.random() * 0.28,
   });
 }
@@ -612,7 +614,7 @@ function playScratchTearSound(distance) {
 function playFinalTearSound() {
   playTearSlice({
     duration: 0.46 + Math.random() * 0.16,
-    volume: 0.12,
+    volume: 0.24,
     rate: 0.94 + Math.random() * 0.1,
   });
 }
@@ -677,10 +679,14 @@ function playFallbackTearSlice({ duration, volume, rate }) {
   tearAudioState.scratchIndex = (tearAudioState.scratchIndex + 1) % fallbackScratchTearSounds.length;
   sound.pause();
   sound.currentTime = pickTearSliceOffset(12.24, duration);
-  sound.volume = Math.min(volume * 1.15, 0.18);
+  sound.volume = Math.min(volume, 0.3);
   sound.playbackRate = rate;
-  sound.play().catch(() => {});
-  window.setTimeout(() => sound.pause(), duration * 1000);
+  sound
+    .play()
+    .then(() => {
+      window.setTimeout(() => sound.pause(), duration * 1000 + 80);
+    })
+    .catch(() => {});
 }
 
 function pickTearSliceOffset(sourceDuration, sliceDuration) {
